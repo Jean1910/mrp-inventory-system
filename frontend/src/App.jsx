@@ -74,6 +74,29 @@ function App() {
     }
   };
 
+  // --- NOVAS FUNÇÕES DE EXCLUSÃO (CRUD COMPLETO) ---
+  const handleDeleteMaterial = async (id) => {
+    if (!window.confirm("Tem certeza que deseja excluir este material?")) return;
+    try {
+      await api.delete(`/raw-materials/${id}`);
+      alert("Material excluído com sucesso!");
+      fetchData(); // Atualiza a lista na tela
+    } catch (err) {
+      alert("Erro ao excluir material. Verifique se o backend está rodando a nova rota.");
+    }
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm("Tem certeza que deseja excluir este produto?")) return;
+    try {
+      await api.delete(`/products/${id}`);
+      alert("Produto excluído com sucesso!");
+      fetchData(); // Atualiza a lista na tela
+    } catch (err) {
+      alert("Erro ao excluir produto.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#111827] text-white p-4 md:p-8 font-sans">
       <div className="max-w-5xl mx-auto">
@@ -137,6 +160,7 @@ function App() {
                     <tr>
                       <th className="py-4 px-6">Nome do Insumo</th>
                       <th className="py-4 px-6 text-right">Quantidade Disponível</th>
+                      <th className="py-4 px-6 text-center">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-700">
@@ -144,6 +168,15 @@ function App() {
                       <tr key={m.id} className="hover:bg-gray-700/30 transition-colors">
                         <td className="py-4 px-6 font-semibold">{m.name}</td>
                         <td className="py-4 px-6 text-right font-mono text-indigo-400">{m.stock_quantity}</td>
+                        <td className="py-4 px-6 text-center">
+                          {/* Botão de Excluir Material */}
+                          <button 
+                            onClick={() => handleDeleteMaterial(m.id)}
+                            className="bg-red-900/50 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded-lg text-sm font-bold transition-all border border-red-800"
+                          >
+                            Excluir
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -183,7 +216,18 @@ function App() {
                   <div key={p.id} className="bg-gray-900/30 p-6 rounded-2xl border border-gray-700 hover:border-indigo-500/50 transition-all shadow-inner">
                     <div className="flex justify-between items-center mb-6">
                       <span className="font-extrabold text-xl text-white">{p.name}</span>
-                      <span className="bg-green-900/40 text-green-400 px-4 py-1 rounded-full font-mono text-sm border border-green-800">R$ {p.value}</span>
+                      <div className="flex gap-3 items-center">
+                        <span className="bg-green-900/40 text-green-400 px-4 py-1 rounded-full font-mono text-sm border border-green-800">
+                          R$ {p.value}
+                        </span>
+                        {/* Botão de Excluir Produto */}
+                        <button 
+                          onClick={() => handleDeleteProduct(p.id)}
+                          className="bg-red-900/50 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded-full text-sm font-bold transition-all border border-red-800"
+                        >
+                          Excluir
+                        </button>
+                      </div>
                     </div>
                     <div className="flex flex-col md:flex-row gap-3">
                       <select id={`mat-${p.id}`} className="bg-gray-800 p-3 rounded-xl flex-1 text-sm outline-none border border-gray-700 focus:border-indigo-500">
