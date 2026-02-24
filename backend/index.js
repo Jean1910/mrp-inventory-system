@@ -8,16 +8,16 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// ADICIONAMOS O /api EM TODAS AS ROTAS PARA COMBINAR COM O FRONT-END
+// ==========================================
+// ROTAS DE MATÉRIA-PRIMA (RAW MATERIALS)
+// ==========================================
 
-// --- RAW MATERIALS (Versão Debug para resolver Erro 500) ---
+// Criar (Create)
 app.post('/api/raw-materials', async (req, res) => {
     const { name, stock_quantity } = req.body;
     
-    // Log para conferir se o Front-end está enviando os dados certos
     console.log("LOG SUPORTE - Recebido do Front:", { name, stock_quantity });
 
-    // Validação básica para evitar erro de 'null' no banco
     if (!name || stock_quantity === undefined) {
         return res.status(400).json({ error: "Nome ou quantidade faltando no formulário." });
     }
@@ -27,21 +27,15 @@ app.post('/api/raw-materials', async (req, res) => {
             'INSERT INTO raw_materials (name, stock_quantity) VALUES ($1, $2) RETURNING *',
             [name, stock_quantity]
         );
-        
         console.log("LOG SUPORTE - Salvo com sucesso:", result.rows[0]);
         res.status(201).json(result.rows[0]);
-
     } catch (err) {
-        // 2. ESTA LINHA VAI PRINTAR O MOTIVO REAL NO SEU TERMINAL VS CODE
         console.error("ERRO CRÍTICO NO BANCO DE DADOS:", err.message);
-        
-        res.status(500).json({ 
-            error: "Erro interno no servidor", 
-            details: err.message 
-        });
+        res.status(500).json({ error: "Erro interno no servidor", details: err.message });
     }
 });
 
+// Ler (Read)
 app.get('/api/raw-materials', async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM raw_materials ORDER BY name ASC');
@@ -51,7 +45,40 @@ app.get('/api/raw-materials', async (req, res) => {
     }
 });
 
-// --- PRODUCTS ---
+// Atualizar (Update)
+app.put('/api/raw-materials/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, stock_quantity } = req.body;
+    try {
+        const result = await db.query(
+            'UPDATE raw_materials SET name = $1, stock_quantity = $2 WHERE id = $3 RETURNING *',
+            [name, stock_quantity, id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error("Erro ao atualizar material:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Apagar (Delete)
+app.delete('/api/raw-materials/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM product_materials WHERE material_id = $1', [id]);
+        await db.query('DELETE FROM raw_materials WHERE id = $1', [id]);
+        res.json({ message: "Material successfully deleted!" });
+    } catch (err) {
+        console.error("Erro ao excluir material:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// ROTAS DE PRODUTOS (PRODUCTS)
+// ==========================================
+
+// Criar (Create)
 app.post('/api/products', async (req, res) => {
     const { name, value } = req.body;
     try {
@@ -65,6 +92,7 @@ app.post('/api/products', async (req, res) => {
     }
 });
 
+// Ler (Read)
 app.get('/api/products', async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM products ORDER BY value DESC');
@@ -74,7 +102,40 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// --- ASSOCIATION ---
+// Atualizar (Update)
+app.put('/api/products/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, value } = req.body;
+    try {
+        const result = await db.query(
+            'UPDATE products SET name = $1, value = $2 WHERE id = $3 RETURNING *',
+            [name, value, id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error("Erro ao atualizar produto:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Apagar (Delete)
+app.delete('/api/products/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM product_materials WHERE product_id = $1', [id]);
+        await db.query('DELETE FROM products WHERE id = $1', [id]);
+        res.json({ message: "Product successfully deleted!" });
+    } catch (err) {
+        console.error("Erro ao excluir produto:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// ASSOCIAÇÃO & LÓGICA DE NEGÓCIO (MRP)
+// ==========================================
+
+// Vincular Material ao Produto
 app.post('/api/products/:id/materials', async (req, res) => {
     const { id } = req.params;
     const { material_id, quantity_needed } = req.body;
@@ -89,7 +150,7 @@ app.post('/api/products/:id/materials', async (req, res) => {
     }
 });
 
-// --- SUGGESTION ---
+// Sugestão de Produção (A Mágica)
 app.get('/api/production-suggestion', async (req, res) => {
     try {
         const productsRes = await db.query('SELECT * FROM products ORDER BY value DESC');
@@ -130,40 +191,10 @@ app.get('/api/production-suggestion', async (req, res) => {
 });
 
 // ==========================================
-// ROTAS DE EXCLUSÃO (DELETE) - CRUD COMPLETO
+// INICIALIZAÇÃO DO SERVIDOR
 // ==========================================
 
-// Excluir Matéria-Prima
-app.delete('/api/raw-materials/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-        // Remove associações na tabela product_materials primeiro (proteção de Foreign Key)
-        await db.query('DELETE FROM product_materials WHERE material_id = $1', [id]);
-        // Agora sim, exclui o material
-        await db.query('DELETE FROM raw_materials WHERE id = $1', [id]);
-        res.json({ message: "Material successfully deleted!" });
-    } catch (err) {
-        console.error("Erro ao excluir material:", err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Excluir Produto
-app.delete('/api/products/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-        // Remove associações na tabela product_materials primeiro
-        await db.query('DELETE FROM product_materials WHERE product_id = $1', [id]);
-        // Exclui o produto
-        await db.query('DELETE FROM products WHERE id = $1', [id]);
-        res.json({ message: "Product successfully deleted!" });
-    } catch (err) {
-        console.error("Erro ao excluir produto:", err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Teste de conexão com o banco logo na inicialização
+// Teste de conexão
 db.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.error('❌ ERRO DE CONEXÃO COM O NEON:', err.stack);
@@ -176,7 +207,6 @@ const server = app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
 
-// Impede que o processo feche por erros não tratados
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Erro não tratado em:', promise, 'razão:', reason);
 });

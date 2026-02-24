@@ -74,7 +74,44 @@ function App() {
     }
   };
 
-  // --- NOVAS FUNÇÕES DE EXCLUSÃO (CRUD COMPLETO) ---
+  // --- NOVAS FUNÇÕES DE EDIÇÃO (UPDATE) ---
+  const handleEditMaterial = async (material) => {
+    const newName = window.prompt("Novo nome do material:", material.name);
+    const newQty = window.prompt("Nova quantidade em estoque:", material.stock_quantity);
+    
+    if (newName && newQty) {
+      try {
+        await api.put(`/raw-materials/${material.id}`, { 
+          name: newName, 
+          stock_quantity: parseFloat(newQty) 
+        });
+        alert("Material atualizado!");
+        fetchData();
+      } catch (err) {
+        alert("Erro ao atualizar material.");
+      }
+    }
+  };
+
+  const handleEditProduct = async (product) => {
+    const newName = window.prompt("Novo nome do produto:", product.name);
+    const newValue = window.prompt("Novo preço de venda:", product.value);
+    
+    if (newName && newValue) {
+      try {
+        await api.put(`/products/${product.id}`, { 
+          name: newName, 
+          value: parseFloat(newValue) 
+        });
+        alert("Produto atualizado!");
+        fetchData();
+      } catch (err) {
+        alert("Erro ao atualizar produto.");
+      }
+    }
+  };
+
+  // --- FUNÇÕES DE EXCLUSÃO (DELETE) ---
   const handleDeleteMaterial = async (id) => {
     if (!window.confirm("Tem certeza que deseja excluir este material?")) return;
     try {
@@ -168,7 +205,14 @@ function App() {
                       <tr key={m.id} className="hover:bg-gray-700/30 transition-colors">
                         <td className="py-4 px-6 font-semibold">{m.name}</td>
                         <td className="py-4 px-6 text-right font-mono text-indigo-400">{m.stock_quantity}</td>
-                        <td className="py-4 px-6 text-center">
+                        <td className="py-4 px-6 text-center flex justify-center gap-2">
+                          {/* Botão de Editar Material */}
+                          <button 
+                            onClick={() => handleEditMaterial(m)}
+                            className="bg-blue-900/50 text-blue-400 hover:bg-blue-600 hover:text-white px-3 py-1 rounded-lg text-sm font-bold transition-all border border-blue-800"
+                          >
+                            Editar
+                          </button>
                           {/* Botão de Excluir Material */}
                           <button 
                             onClick={() => handleDeleteMaterial(m.id)}
@@ -220,6 +264,13 @@ function App() {
                         <span className="bg-green-900/40 text-green-400 px-4 py-1 rounded-full font-mono text-sm border border-green-800">
                           R$ {p.value}
                         </span>
+                        {/* Botão de Editar Produto */}
+                        <button 
+                          onClick={() => handleEditProduct(p)}
+                          className="bg-blue-900/50 text-blue-400 hover:bg-blue-600 hover:text-white px-3 py-1 rounded-full text-sm font-bold transition-all border border-blue-800"
+                        >
+                          Editar
+                        </button>
                         {/* Botão de Excluir Produto */}
                         <button 
                           onClick={() => handleDeleteProduct(p.id)}
